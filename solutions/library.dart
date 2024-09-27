@@ -324,15 +324,15 @@ class Library {
 
 
   // what if there is input error => "kite "
-  Book searchBook(String title) {
+  Book? searchBook(String title) {
     var result = books
-        .where((book) => book.title.toLowerCase().contains(title.toLowerCase()));
+        .where((book) => book.title.toLowerCase().contains(title.toLowerCase().trim()));
     if(result.isEmpty){
       print('no book found with this title: $title');
-      return null
+      return null;
     }else{
       result.forEach((book) => print(book));
-      return result[0]
+      return result[0];
     }
   }
 
@@ -353,17 +353,18 @@ void listAllAvailableBooks() {
 // borrowBook(isbn, userId)
 void borrowBook(String isbn){
   bool val = false;
- val = books.firstWhere((book) =>book.isbn==isbn);
+ val = books.firstWhere((book) =>book.isbn==isbn orElse: null);
 if(val ==false){
   print('No book found for this library.');
 }else{
+  print('book is borrowed');
   // if book is available
-  if(var.isAvailable) {
-    // set isAvailable to false
+  // if(var.isAvailable) {
+  //   // set isAvailable to false
 
-    // create a borrow history object
-    // add the created bookHistory into borrowHIstories list
-  }
+  //   // create a borrow history object
+  //   // add the created bookHistory into borrowHIstories list
+  // }
   print('book is borrowed');
   // removeBooks(isbn);
   }

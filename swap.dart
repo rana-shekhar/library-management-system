@@ -7,6 +7,7 @@
 //   print('$a.....$b');
 // }
 import 'dart:io';
+
 class Book {
   String? title;
   String? author;
@@ -21,31 +22,47 @@ class Book {
   }
 }
 
+class User {
+  String name;
+  String userType;
+  List<String> borrowedBooks;
+
+  User(this.name, this.userType) : borrowedBooks = [];
+
+  @override
+  String toString() {
+    return 'Name: $name, Type: $userType, Borrowed Books: $borrowedBooks';
+  }
+}
+
 class Library {
   List<Book> books = [];
+  List<User> users = [];
 
   void addBook(Book book) {
     books.add(book);
     print('Book added: $book');
   }
 
-  void removeBook(String title) {
+  void removeBook(String isbn) {
     var bookToRemove = books.firstWhere(
-      (book) => book.title == title);
-     
-    
-    if (bookToRemove != null) {
+      (book) => book.isbn == isbn,
+      orElse: () => Book("", "", "", false),
+    );
+
+    if (bookToRemove.isAvailable) {
       books.remove(bookToRemove);
-      print('Book removed: $bookToRemove');
+      print('Book removed: $isbn');
     } else {
-      print('No book with title "$title" found.');
+      print('No book with ISBN "$isbn" found.');
     }
   }
 
   void searchBooks({String? title, String? author}) {
     var results = books.where((book) {
       bool matchesTitle = title != null && book.title?.contains(title) == true;
-      bool matchesAuthor = author != null && book.author?.contains(author) == true;
+      bool matchesAuthor =
+          author != null && book.author?.contains(author) == true;
       return matchesTitle || matchesAuthor;
     }).toList();
 
@@ -67,71 +84,197 @@ class Library {
     }
   }
 
-  void borrowBook(String isbn) {
-    var bookToBorrow = books.firstWhere(
-      (book) => book.isbn == isbn);
-      
-    
-    if (bookToBorrow != null) {
-      if (bookToBorrow.isAvailable) {
-        bookToBorrow.isAvailable = false;
-        print('Book borrowed: $bookToBorrow');
-      } else {
-        print('The book is currently not available.');
-      }
+  void borrowBook(String isbn, User user) {
+    if (user.userType != 'member') {
+      print('Only members can borrow books.');
+      return;
+    }
+    var book = books.firstWhere(
+      (book) => book.isbn == isbn && book.isAvailable,
+      orElse: () => Book("", "", "", false),
+    );
+    if (book.isAvailable) {
+      book.isAvailable = false;
+      user.borrowedBooks.add(isbn);
+      print('Book borrowed: $book');
     } else {
-      print('No book with ISBN "$isbn" found.');
+      print('Book with ISBN $isbn is not available.');
     }
   }
 
-  void returnBook(String isbn) {
-    var bookToReturn = books.firstWhere(
+  void returnBook(String isbn, User user) {
+    var book = books.firstWhere(
       (book) => book.isbn == isbn,
-      orElse: () => null,
+      orElse: () => Book("", "", "", false),
     );
-    if (bookToReturn != null) {
-      if (!bookToReturn.isAvailable) {
-        bookToReturn.isAvailable = true;
-        print('Book returned: $bookToReturn');
-      } else {
-        print('The book was not borrowed.');
-      }
-    } else {
-      print('No book with ISBN "$isbn" found.');
+    if (book.isAvailable) {
+      print('No such book with ISBN: $isbn.');
+      return;
     }
+    if (!user.borrowedBooks.contains(isbn)) {
+      print('This user did not borrow the book with ISBN: $isbn.');
+      return;
+    }
+    book.isAvailable = true;
+    user.borrowedBooks.remove(isbn);
+    print('Book returned: $book');
+  }
+
+  void addUser(User user) {
+    users.add(user);
+    print('User added: $user');
+  }
+
+  void removeUser(String name) {
+    users.removeWhere((user) => user.name == name);
+    print('User $name removed.');
+  }
+
+  void listUsers() {
+    print('Listing all users:');
+    users.forEach(print);
   }
 }
 
 void main() {
   var library = Library();
-  
-  // Adding books
-  library.addBook(Book('1984', 'George Orwell', '1234567890', true));
-  library.addBook(Book('To Kill a Mockingbird', 'Harper Lee', '0987654321', true));
 
-  // Listing available books
-  library.listAvailableBooks();
+  stdout.write('Enter your name: ');
+  var name = stdin.readLineSync()!;
+  stdout.write('Are you a member or librarian? ');
+  var userType = stdin.readLineSync()!.toLowerCase();
 
-  // Searching for books
-  library.searchBooks(title: '1984');
-  library.searchBooks(author: 'Harper Lee');
+  var user = User(name, userType);
 
-  // Borrowing a book
-  library.borrowBook('1234567890');
+  if (userType == 'librarian') {
+    while (true) {
+      print('Librarian Menu:');
+      print('1. Add Book');
+      print('2. Remove Book');
+      print('3. Search Books');
+      print('4. List Available Books');
+      print('5. Add User');
+      print('6. Remove User');
+      print('7. List Users');
+      print('8. Exit');
+      stdout.write('Choose an option: ');
+      var choice = stdin.readLineSync();
 
-  // Trying to borrow the same book again
-  library.borrowBook('1234567890');
+      switch (choice) {
+        case '1':
+          stdout.write('Enter title: ');
+          var title = stdin.readLineSync();
+          stdout.write('Enter author: ');
+          var author = stdin.readLineSync();
+          stdout.write('Enter ISBN: ');
+          var isbn = stdin.readLineSync();
+          stdout.write('Is the book available? (yes/no): ');
+          var availability = stdin.readLineSync()?.toLowerCase() == 'yes';
 
-  // Returning a borrowed book
-  library.returnBook('1234567890');
+          var book = Book(title, author, isbn, availability);
+          library.addBook(book);
+          break;
 
-  // Trying to return the same book again
-  library.returnBook('1234567890');
+        case '2':
+          stdout.write('Enter ISBN of the book to remove: ');
+          var isbnToRemove = stdin.readLineSync();
+          library.removeBook(isbnToRemove!);
+          break;
 
-  // Removing a book
-  library.removeBook('To Kill a Mockingbird');
+        case '3':
+          stdout.write('Enter title to search: ');
+          var searchTitle = stdin.readLineSync();
+          stdout.write('Enter author to search: ');
+          var searchAuthor = stdin.readLineSync();
+          library.searchBooks(title: searchTitle, author: searchAuthor);
+          break;
 
-  // Listing available books again
-  library.listAvailableBooks();
+        case '4':
+          library.listAvailableBooks();
+          break;
+
+        case '5':
+          stdout.write('Enter name: ');
+          var userName = stdin.readLineSync();
+          stdout.write('Enter user type (member/librarian): ');
+          var userType = stdin.readLineSync()!;
+          var newUser = User(userName!, userType.toLowerCase());
+          library.addUser(newUser);
+          break;
+
+        case '6':
+          stdout.write('Enter name of the user to remove: ');
+          var userName = stdin.readLineSync();
+          library.removeUser(userName!);
+          break;
+
+        case '7':
+          library.listUsers();
+          break;
+
+        case '8':
+          print('Exiting...');
+          return;
+
+        default:
+          print('Invalid option. Please try again.');
+      }
+
+      print('\n');
+    }
+  } else if (userType == 'member') {
+    while (true) {
+      print('Member Menu:');
+      print('1. Search Books');
+      print('2. List Available Books');
+      print('3. Borrow Book');
+      print('4. Return Book');
+      print('5. View Borrowed Books');
+      print('6. Exit');
+      stdout.write('Choose an option: ');
+      var choice = stdin.readLineSync();
+
+      switch (choice) {
+        case '1':
+          stdout.write('Enter title to search: ');
+          var searchTitle = stdin.readLineSync();
+          stdout.write('Enter author to search: ');
+          var searchAuthor = stdin.readLineSync();
+          library.searchBooks(title: searchTitle, author: searchAuthor);
+          break;
+
+        case '2':
+          library.listAvailableBooks();
+          break;
+
+        case '3':
+          stdout.write('Enter ISBN of the book to borrow: ');
+          var isbn = stdin.readLineSync();
+          library.borrowBook(isbn!, user);
+          break;
+
+        case '4':
+          stdout.write('Enter ISBN of the book to return: ');
+          var isbnToReturn = stdin.readLineSync();
+          library.returnBook(isbnToReturn!, user);
+          break;
+
+        case '5':
+          print('Your borrowed books: ${user.borrowedBooks}');
+          break;
+
+        case '6':
+          print('Exiting...');
+          return;
+
+        default:
+          print('Invalid option. Please try again.');
+      }
+
+      print('\n');
+    }
+  } else {
+    print('Invalid user type. Please restart the program.');
+  }
 }
 
